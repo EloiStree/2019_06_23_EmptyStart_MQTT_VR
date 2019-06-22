@@ -4,5 +4,8 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/MQTT/mqtt_test.unity
+    guid: 3fb17cfee1a7e204d8592608cca099d0
   m_configObjects: {}
