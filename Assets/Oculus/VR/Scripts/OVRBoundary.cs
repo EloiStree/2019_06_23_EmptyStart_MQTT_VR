@@ -121,11 +121,18 @@ public class OVRBoundary
 	private static OVRNativeBuffer cachedGeometryNativeBuffer = new OVRNativeBuffer(0);
 	private static float[] cachedGeometryManagedBuffer = new float[0];
 	private List<Vector3> cachedGeometryList = new List<Vector3>();
-	/// <summary>
-	/// Returns an array of 3d points (in clockwise order) that define the specified boundary type.
-	/// All points are returned in local tracking space shared by tracked nodes and accessible through OVRCameraRig's trackingSpace anchor.
-	/// </summary>
-	public Vector3[] GetGeometry(OVRBoundary.BoundaryType boundaryType)
+    public bool isBoundaryVisible;
+    public bool isConfigured;
+    public Vector3 boundaryDimensionArea;
+    public Vector3 boundaryDimensionOuter;
+    public Vector3[] boundaryGeometryArea;
+    public Vector3[] boundaryGeometryOuter;
+
+    /// <summary>
+    /// Returns an array of 3d points (in clockwise order) that define the specified boundary type.
+    /// All points are returned in local tracking space shared by tracked nodes and accessible through OVRCameraRig's trackingSpace anchor.
+    /// </summary>
+    public Vector3[] GetGeometry(OVRBoundary.BoundaryType boundaryType)
 	{
 		if (OVRManager.loadedXRDevice != OVRManager.XRDevice.Oculus)
 		{

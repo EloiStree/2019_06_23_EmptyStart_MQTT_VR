@@ -19,7 +19,7 @@ public class MQTTPlayer_VirtualBodyPosition : MQTTPlayerInfoRegularSender
 }
 
 [System.Serializable]
-public struct VirtualBodyPosition {
+public class VirtualBodyPosition {
     public SpaceTrackedPoint m_head;
     public SpaceTrackedPoint m_leftHand;
     public SpaceTrackedPoint m_rightHand;

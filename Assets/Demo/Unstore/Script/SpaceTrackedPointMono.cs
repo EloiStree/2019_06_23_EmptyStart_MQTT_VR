@@ -29,7 +29,9 @@ public struct SpaceTrackedPoint {
     }
 
     public void SetPoint(Transform unityPosition, Transform trackerRoot, Transform headPosition) {
-
+        m_unityPointOfView = new SpacePoint();
+        m_trackerPointOfView = new SpacePoint();
+        m_headPointOfView = new SpacePoint();
         m_unityPointOfView.SetWith( unityPosition);
         m_trackerPointOfView.SetWith(trackerRoot, trackerRoot);
         m_headPointOfView.SetWith(headPosition, headPosition);
@@ -38,26 +40,30 @@ public struct SpaceTrackedPoint {
 
 }
 [System.Serializable]
-public struct SpacePoint {
-    public Vector3 m_position;
-    public Quaternion m_rotation;
-
-    public SpacePoint(Transform reference)
+public class  SpacePoint {
+    public Vector3 m_position= Vector3.zero;
+    public Quaternion m_rotation= Quaternion.identity;
+    public SpacePoint()
     {
         m_position = new Vector3();
-        m_rotation = new Quaternion();
+        m_rotation = Quaternion.identity;
+    }
+        public SpacePoint(Transform reference)
+    {
+        m_position = new Vector3();
+        m_rotation = Quaternion.identity;
         SetWith(reference);
     }
     public SpacePoint(Transform reference, Transform pointOfView)
     {
         m_position = new Vector3();
-        m_rotation = new Quaternion();
+        m_rotation = Quaternion.identity;
         SetWith(reference, pointOfView);
     }
     public SpacePoint(Vector3 position, Quaternion rotation)
     {
         m_position = new Vector3();
-        m_rotation = new Quaternion();
+        m_rotation = Quaternion.identity;
         SetWith(position, rotation);
     }
  
@@ -84,7 +90,7 @@ public struct SpacePoint {
     }
     
     public static SpacePoint GetRelocatedPoint(SpacePoint point, SpacePoint pointOfView) {
-        SpacePoint result;
+        SpacePoint result = new SpacePoint() ;
         result.m_position = GetRelocatedPosition(point.m_position, pointOfView);
         result.m_rotation = GetRelocatedRotation(point.m_rotation, pointOfView);
         return result; 

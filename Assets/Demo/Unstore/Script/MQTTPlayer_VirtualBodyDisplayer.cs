@@ -32,6 +32,8 @@ public class MQTTPlayer_VirtualBodyDisplayer : MonoBehaviour
 
     void SetWith(VirtualBodyPosition value)
     {
+        if (value == null)
+            return;
         if (m_useLerp)
         {
             Lerp(m_head, value.m_head);
@@ -53,6 +55,10 @@ public class MQTTPlayer_VirtualBodyDisplayer : MonoBehaviour
 
     private void Lerp(GameObject target,  SpaceTrackedPoint value)
     {
+        if (target==null || value.m_unityPointOfView==null)
+            return;
+        if (value.m_unityPointOfView.m_rotation.w == 0)
+            value.m_unityPointOfView.m_rotation = Quaternion.identity;
         target.transform.position = Vector3.Lerp(target.transform.position, value.m_unityPointOfView.m_position, Time.deltaTime* m_lerpFactor);
         target.transform.rotation = Quaternion.Lerp(target.transform.rotation, value.m_unityPointOfView.m_rotation, Time.deltaTime* m_lerpFactor);
     }

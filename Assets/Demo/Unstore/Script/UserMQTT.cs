@@ -33,6 +33,8 @@ public class UserMQTT : MonoBehaviour
 
     public OnNewUserDetected m_newUser;
     public OnPackageReceivedEvent m_debugPackage;
+
+    public Queue<string> m_newPlayerDetected = new Queue<string>();
     internal void AddTopicToListen(string topic)
     {
         //m_listenedTopics.Add(topic);
@@ -45,7 +47,10 @@ public class UserMQTT : MonoBehaviour
         client.MqttMsgPublishReceived += client_MqttMsgPublishReceived;
         string clientId = Guid.NewGuid().ToString();
         client.Connect(clientId);
-        client.Subscribe(m_listenedTopics.ToArray(), new byte[] { MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
+        foreach (string topic in m_listenedTopics)
+        {
+             client.Subscribe(new string[] {topic }, new byte[] { MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
+        }
 
     }
 
@@ -74,7 +79,7 @@ public class UserMQTT : MonoBehaviour
             else m_lastPackage[packageKey] = new MQTT_UserPackageReceived();
 
             if (! m_userDetectedOnceRegister.ContainsKey(userId)) {
-                m_newUser.Invoke(userId);
+                m_newPlayerDetected.Enqueue(userId);
             }
             m_userDetectedOnceRegister[userId] = userId;
             MQTT_UserPackageReceived info = m_lastPackage[packageKey];
@@ -96,6 +101,12 @@ public class UserMQTT : MonoBehaviour
     private void Update()
     {
 
+        if (m_newPlayerDetected.Count > 0)
+        {
+            while (m_newPlayerDetected.Count > 0) {
+                m_newUser.Invoke(m_newPlayerDetected.Dequeue());
+            }
+        }
         m_userDetectedOnce = new List<string>(this.m_userDetectedOnceRegister.Keys);
 
         List<string> keyList = new List<string>(this.m_lastPackageReceivedCheck.Keys);
