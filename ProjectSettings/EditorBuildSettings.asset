@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Merge/Merge.unity
+    guid: 43f1be5989c8b2f48a098cd80f32caf1
+  - enabled: 1
     path: Assets/MQTT/mqtt_test.unity
     guid: 3fb17cfee1a7e204d8592608cca099d0
   - enabled: 1

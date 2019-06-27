@@ -16,15 +16,16 @@ public class UserMQTT : MonoBehaviour
     public int m_serverPort = 1883;
     public List<string> m_listenedTopics ;
     private MqttClient client;
-    public bool m_useDebug = false;
     public bool m_useDebugLog = false;
 
     public float m_timeSincePlaying;
-    public float m_bytesSend;
+    public int m_bytesSend;
+    public int m_bytesReceived;
+    public float m_megaBytesBySeconds;
 
-    public Dictionary<string, MQTT_UserPackageReceived> m_lastPackage = new Dictionary<string, MQTT_UserPackageReceived>();
-    public Dictionary<string, bool> m_lastPackageReceivedCheck = new Dictionary<string, bool>();
-    public Dictionary<string, string> m_userDetectedOnceRegister = new Dictionary<string, string>();
+    public Dictionary<string , MQTT_UserPackageReceived> m_lastPackage = new Dictionary<string, MQTT_UserPackageReceived>();
+    public Dictionary<string , bool> m_lastPackageReceivedCheck = new Dictionary<string, bool>();
+    public Dictionary<string , string> m_userDetectedOnceRegister = new Dictionary<string, string>();
 
 
     [Header("Debug info")]
@@ -40,7 +41,15 @@ public class UserMQTT : MonoBehaviour
         //m_listenedTopics.Add(topic);
         //client.Subscribe(m_listenedTopics.ToArray(), new byte[] { MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
     }
-    void Awake()
+
+    public bool m_startInAwake;
+    public bool m_serverStarted;
+    private void Awake()
+    {
+        if (m_startInAwake)
+            StartMQTT();
+    }
+    public void StartMQTT()
     {
         m_deviceId = GetUserId();
         client = new MqttClient(IPAddress.Parse(m_serverIp), m_serverPort, false, null);
@@ -51,6 +60,7 @@ public class UserMQTT : MonoBehaviour
         {
              client.Subscribe(new string[] {topic }, new byte[] { MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
         }
+        m_serverStarted = true;
 
     }
 
@@ -58,12 +68,12 @@ public class UserMQTT : MonoBehaviour
     void client_MqttMsgPublishReceived(object sender, MqttMsgPublishEventArgs e)
     {
         MqttClient client = (MqttClient)sender;
-       
+        m_bytesReceived += e.Message.Length;
         string message = System.Text.Encoding.UTF8.GetString(e.Message);
-        if (message.IndexOf("<HeyMonAmi>") == 0) {
-            int startPackageInfo = "<HeyMonAmi>".Length;
-            int endPackageInfo = message.IndexOf("<HeyMonAmi/>");
-            int messageStart = endPackageInfo + "<HeyMonAmi/>".Length;
+        if (message.IndexOf("<hma>") == 0) {
+            int startPackageInfo = "<hma>".Length;
+            int endPackageInfo = message.IndexOf("<hma/>");
+            int messageStart = endPackageInfo + "<hma/>".Length;
 
             string packageInfo = message.Substring(startPackageInfo,endPackageInfo- startPackageInfo);
             string[] infoToken = packageInfo.Split('|');
@@ -94,12 +104,18 @@ public class UserMQTT : MonoBehaviour
                 Debug.Log("Received: " + info.m_message);
                 Debug.Log("ID: : " + client.ClientId);
             }
-           // m_lastPackage[packageKey] = info;
+            // m_lastPackage[packageKey] = info;
             m_lastPackageReceivedCheck[packageKey] = true;
         }
     }
+
+    public int messageInQueue;
+    public int messageStored;
+    public int messageSend;
     private void Update()
     {
+        if (!m_serverStarted)
+            return;
 
         if (m_newPlayerDetected.Count > 0)
         {
@@ -118,26 +134,43 @@ public class UserMQTT : MonoBehaviour
                 m_debugPackage.Invoke(m_lastPackage[key]);
             }
         }
+
+        messageInQueue = m_messagesToSend.Count;
+
+        while (m_messagesToSend.Count > 0) {
+
+            MessageToSendByMQTT msg = m_messagesToSend.Dequeue();
+
+            byte[] toSend = System.Text.Encoding.UTF8.GetBytes(msg.m_message);
+
+            m_bytesSend += toSend.Length;
+            client.Publish(msg.m_topic, toSend, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, false);
+            messageSend++;
+
+        }
+        m_megaBytesBySeconds = (((float)(m_bytesSend+m_bytesReceived) )/ m_timeSincePlaying)/1000f;
         m_timeSincePlaying += Time.deltaTime;
     }
 
+    public class MessageToSendByMQTT {
+        public string m_topic;
+        public string m_message;
+    }
+    public Queue<MessageToSendByMQTT> m_messagesToSend = new Queue<MessageToSendByMQTT>();
     public void Send(string topic, string message)
     {
-        string oneLineInfo = "<HeyMonAmi>" + GetUserId() + "|" + GetTime() + "<HeyMonAmi/>";
-        byte[] toSend = System.Text.Encoding.UTF8.GetBytes(oneLineInfo + message);
+        if (!m_serverStarted)
+            return;
+        messageStored++;
+        string oneLineInfo = "<hma>" + GetUserId() + "|" + GetTime() + "<hma/>";
+        m_messagesToSend.Enqueue(new MessageToSendByMQTT() { m_message = oneLineInfo+message, m_topic = topic });
 
-        m_bytesSend += toSend.Length;
-        client.Publish(topic,toSend , MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
-        if (m_useDebug)
-        {
-            m_bytesSend += toSend.Length;
-            client.Publish("debug/all", toSend, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
-        }
     }
 
     private static long GetTime()
     {
-        return DateTime.Now.ToFileTime();
+
+        return System.Diagnostics.Stopwatch.GetTimestamp();
     }
 
     public static string GetUserId() {
@@ -159,7 +192,7 @@ public class MQTT_UserPackageReceived
 
     internal float GetLatency()
     {
-        return (GetTimeWhenReceivedAsTimestamp() - GetTimeWhenSendAsTimestamp())/10000000f;
+        return (GetTimeWhenReceivedAsTimestamp() - GetTimeWhenSendAsTimestamp()) /100000f;
     }
     public string GetUserDeviceId() {
         return m_userDeviceId;

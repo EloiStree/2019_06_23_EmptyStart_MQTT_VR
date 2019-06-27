@@ -8,18 +8,24 @@ public class MQTTPlayer_VirtualBodyDisplayer : MonoBehaviour
     public GameObject m_head;
     public GameObject m_leftHand;
     public GameObject m_rightHand;
+    public GameObject m_headWithLerp;
+    public GameObject m_leftHandWithLerp;
+    public GameObject m_rightHandWithLerp;
     public MQTT_UserPackageReceived m_last;
-    public VirtualBodyPosition m_lastBodyPosition;
+    public OVRCompressedInfo m_lastBodyPosition;
     public float m_latency;
-    public bool m_useLerp;
 
-    public void ReceivedMDTTPackage(MQTT_UserPackageReceived package) {
+    public void ReceivedMDTTPackage(MQTT_UserPackageReceived package)
+    {
 
-        if(package.m_userDeviceId== linkedUserId)
-            if (package.GetTimeWhenSendAsTimestamp() >= m_last.GetTimeWhenSendAsTimestamp()){
+        if (package.m_userDeviceId == linkedUserId)
+            if (package.GetTimeWhenSendAsTimestamp() >= m_last.GetTimeWhenSendAsTimestamp())
+            {
                 m_last = package;
                 m_latency = m_last.GetLatency();
-                m_lastBodyPosition = JsonUtility.FromJson<VirtualBodyPosition>(package.m_message);
+
+                
+                m_lastBodyPosition = OVRCompressedInfo.TryParse(package.m_message);
             
             }
 
@@ -30,37 +36,34 @@ public class MQTTPlayer_VirtualBodyDisplayer : MonoBehaviour
         SetWith(m_lastBodyPosition);
     }
 
-    void SetWith(VirtualBodyPosition value)
+    void SetWith(OVRCompressedInfo value)
     {
         if (value == null)
             return;
-        if (m_useLerp)
-        {
-            Lerp(m_head, value.m_head);
-            Lerp(m_leftHand, value.m_leftHand);
-            Lerp(m_rightHand, value.m_rightHand);
+        Lerp(m_headWithLerp, value.h);
+        Lerp(m_leftHandWithLerp, value.l);
+        Lerp(m_rightHandWithLerp, value.r);
 
-        }
-        else {
-            m_head.transform.position = value.m_head.m_unityPointOfView.m_position;
-            m_head.transform.rotation = value.m_head.m_unityPointOfView.m_rotation;
+        m_head.transform.position = value.h.GetPosition();
+        m_head.transform.rotation = value.h.GetRotation();
 
-            m_leftHand.transform.position = value.m_leftHand.m_unityPointOfView.m_position;
-            m_leftHand.transform.rotation = value.m_leftHand.m_unityPointOfView.m_rotation;
+        m_leftHand.transform.position = value.l.GetPosition();
+        m_leftHand.transform.rotation = value.l.GetRotation();
 
-            m_rightHand.transform.position = value.m_rightHand.m_unityPointOfView.m_position;
-            m_rightHand.transform.rotation = value.m_rightHand.m_unityPointOfView.m_rotation;
-        }
+        m_rightHand.transform.position = value.r.GetPosition();
+        m_rightHand.transform.rotation = value.r.GetRotation();
+
     }
 
-    private void Lerp(GameObject target,  SpaceTrackedPoint value)
+    private void Lerp(GameObject target, CompressedPosition value)
     {
-        if (target==null || value.m_unityPointOfView==null)
+        if (target == null || value == null)
             return;
-        if (value.m_unityPointOfView.m_rotation.w == 0)
-            value.m_unityPointOfView.m_rotation = Quaternion.identity;
-        target.transform.position = Vector3.Lerp(target.transform.position, value.m_unityPointOfView.m_position, Time.deltaTime* m_lerpFactor);
-        target.transform.rotation = Quaternion.Lerp(target.transform.rotation, value.m_unityPointOfView.m_rotation, Time.deltaTime* m_lerpFactor);
+        Quaternion q =value.GetRotation();
+        if (q.w == 0)
+            q = Quaternion.identity;
+        target.transform.position = Vector3.Lerp(target.transform.position, value.GetPosition(), Time.deltaTime * m_lerpFactor);
+        target.transform.rotation = Quaternion.Lerp(target.transform.rotation, q, Time.deltaTime * m_lerpFactor);
     }
-    public float m_lerpFactor=5;
+    public float m_lerpFactor = 5;
 }
